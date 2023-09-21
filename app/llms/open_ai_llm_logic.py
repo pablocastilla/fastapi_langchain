@@ -27,15 +27,21 @@ parser = PydanticOutputParser(pydantic_object=EmergencyRoomTriage)  # type: igno
 
 # system message prompt. It defines the instructions for the system.
 template: str = """
-
-            Previous conversation:
-            {chat_history}
-
             You are a doctor in an emergency room doing the triage.Be very concise.
 
-            Interfact with the user until you have the name.
+            Interfact with the user patient you have the name.
 
-            After that interact with the user until you have one description of the symptons.
+            After that interact with the patient until you have one description of the symptons.
+            
+            About the symptons take what the patient says and do your best guest.Name is mandatory.
+
+            Do not ask for more information than the symptons.
+
+            Do not use the internet as a reference.
+
+            Do not create more conversations than the one you are having.
+
+            Do not use surgery specialties.
 
             When you have the name and the symptons decide the specialty and the function and answer following this format:
             {format_instructions}
@@ -44,13 +50,19 @@ template: str = """
 
 system_message_prompt = SystemMessagePromptTemplate.from_template(template)
 
-human_template = "{text}"
+human_template: str = """
+
+            Previous conversation:
+            {chat_history}
+            
+            Patient: {text}
+            """
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 chat_prompt = ChatPromptTemplate.from_messages(
     [system_message_prompt, human_message_prompt]
 )
 
-memory = ConversationBufferMemory(return_messages=True, input_key="text", memory_key="chat_history")
+memory = ConversationBufferMemory(input_key="text", memory_key="chat_history", human_prefix="Patient", ai_prefix="Doctor")
 
 
 class OpenAILLMLogic(Illm.ILLM):
@@ -76,6 +88,8 @@ class OpenAILLMLogic(Illm.ILLM):
         chain = LLMChain(llm=llm, prompt=chat_prompt, memory=memory, verbose=True)
 
         result: str = await chain.arun({'text': prompt, 'format_instructions': parser.get_format_instructions()})
+
+        print(result)
 
         if self.is_json_convertible(result):
             json_result = json.loads(result)

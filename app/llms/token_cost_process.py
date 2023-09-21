@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from uuid import UUID
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain.schema import LLMResult
