@@ -4,7 +4,7 @@ from abc import ABC
 from contextlib import AbstractContextManager
 
 
-class LLMLogic(AbstractContextManager["LLMLogic"], ABC):
+class ILLM(AbstractContextManager["ILLM"], ABC):
     """
     Abstract implementation of the client that is responsible for the logic of the LLM.
     """

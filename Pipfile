@@ -10,6 +10,7 @@ uvicorn = {extras = ["standard"], version = "*"}
 openai = "*"
 tiktoken = "*"
 itsdangerous = "*"
+gradio = "*"
 
 [dev-packages]
 mypy = "*"

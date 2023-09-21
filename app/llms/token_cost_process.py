@@ -1,7 +1,7 @@
 from uuid import UUID
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain.schema import LLMResult
-from typing import Any, Dict, List, Optional
+from typing import Any, Coroutine, Dict, List, Optional
 import tiktoken
 
 MODEL_COST_PER_1K_TOKENS = {
@@ -71,8 +71,8 @@ class CostCalcAsyncHandler(AsyncCallbackHandler):
 
     def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str], *, run_id: UUID,
                      parent_run_id: Optional[UUID] = None, tags: Optional[List[str]] = None,
-                     metadata: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
-        
+                     metadata: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Coroutine[Any, Any, None]:
+
         encoding = tiktoken.encoding_for_model(self.model)
 
         if self.token_cost_process is None:
@@ -86,6 +86,5 @@ class CostCalcAsyncHandler(AsyncCallbackHandler):
 
         self.token_cost_process.sum_completion_tokens(1)
 
-    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Coroutine[Any, Any, None]:
         self.token_cost_process.sum_successful_requests(1)
-     

@@ -1,10 +1,16 @@
+# this module is the backend of the app
+# it exposes a fastapi post endpoint
+
 from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
-from app.llms.llm_logic import LLMLogic
+from app.llms.Illm import ILLM
 from app.llms.open_ai_llm_logic import OpenAILLMLogic
+import uuid
+
+from app.queue_management.memory_queue_management_system import MemoryQueueManagementSystem
 
 
 class Input(BaseModel):
@@ -23,13 +29,14 @@ async def some_middleware(request: Request, call_next: Any) -> Any:
     response = await call_next(request)
     session = request.cookies.get('session')
     if not session:
-        response.set_cookie(key='session', value=request.cookies.get('session'), httponly=True)
+        # set the cookie with a guid as value
+        response.set_cookie(key='session', value=uuid.uuid4(), httponly=True)
     return response
 
 
 @app.post("/conversation")
 async def input(input: Input) -> Output:
-    llm_logic: LLMLogic = OpenAILLMLogic()
+    llm_logic: ILLM = OpenAILLMLogic(queue_management_system=MemoryQueueManagementSystem())
     with llm_logic:
         response = await llm_logic.chat(input.human_input)
         return Output(output=response)
