@@ -1,3 +1,10 @@
+# the following module is the logic of the chatbot.
+# it uses the langchain library to interact with the LLM.
+# it is a class that implements the ILLM interface.
+# it defines a template for the system message prompt.It gives the behaviour of the chatbot.
+# The chatbot must try to get the name, the identification number and the symptons of the patient.
+# After that it generates a json and sends it to the queue management system.
+
 from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
 from langchain.prompts.chat import SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
@@ -13,7 +20,8 @@ from app.queue_management.iqueue_management_system import IQueueManagementSystem
 
 parser = PydanticOutputParser(pydantic_object=EmergencyRoomTriage)
 
-# system message prompt. It defines the instructions for the system.
+# system message prompt. It defines the instructions for the chatbot for behaving like someone in the emergency room.
+# doing the triage.
 template: str = """
             You are a doctor in an emergency room doing the triage.Be very concise.
 
@@ -67,7 +75,13 @@ class OpenAILLMLogic(Illm.ILLM):
         print(self.token_cost_process.get_cost_summary("gpt-3.5-turbo"))
 
     async def chat(self, prompt: str) -> str:
-        """chat with the LLM."""
+        """chat with the LLM.
+        - get the prompt from the user
+        - send the prompt to the LLM using the history
+        - get the response from the LLM
+        - if the response is a json then send it to the queue management system
+        - return the response to the user
+        """
 
         llm = ChatOpenAI(temperature=0, callbacks=[CostCalcAsyncHandler("gpt-3.5-turbo", self.token_cost_process)])
 

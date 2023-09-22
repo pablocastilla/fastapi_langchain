@@ -1,5 +1,5 @@
 # mypy: ignore-errors
-# pydantic doesn´t work with mypy, so this DTOs are here without mypy type checking
+# pydantic doesn´t work with mypy, so these DTOs are here without mypy type checking
 
 from pydantic import BaseModel, Field
 
