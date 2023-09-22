@@ -1,39 +1,27 @@
 from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
-from langchain.prompts.chat import (
-    SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
-)
-from pydantic import BaseModel, Field
+from langchain.prompts.chat import SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from typing import Any
 from app.llms import Illm
+from app.llms.LLMDTOs import EmergencyRoomTriage
 from app.llms.token_cost_process import CostCalcAsyncHandler, TokenCostProcess
 from langchain.memory import ConversationBufferMemory
 import json
 from app.queue_management.iqueue_management_system import IQueueManagementSystem
 
 
-# Desired output format.
-class EmergencyRoomTriage(BaseModel):
-    name: str = Field(description="patient name")
-    medical_specialty: str = Field(description="specialty to which the patient should be referred.In English.")
-    urgency: int = Field(
-        description="urgency level of the patient, 1 is the most urgent, 5 is the least urgent.In English.")
-    response_to_the_user: str = Field(
-        description="go to the waiting room if urgency level is above 1, go to emergency room if urgency level is 1.Use the language of the user.")
-
-
-parser = PydanticOutputParser(pydantic_object=EmergencyRoomTriage)  # type: ignore
+parser = PydanticOutputParser(pydantic_object=EmergencyRoomTriage)
 
 # system message prompt. It defines the instructions for the system.
 template: str = """
             You are a doctor in an emergency room doing the triage.Be very concise.
 
-            Interfact with the user patient you have the name.
+            Interfact with the user patient until you have the name.
 
-            After that interact with the patient until you have one description of the symptons.
-            
-            About the symptons take what the patient says and do your best guest.Name is mandatory.
+            After that, interact with the patient until you have its identification number.
+
+            After that, interact with the patient until you have one description of the symptons.
 
             Do not ask for more information than the symptons.
 
@@ -43,7 +31,7 @@ template: str = """
 
             Do not use surgery specialties.
 
-            When you have the name and the symptons decide the specialty and the function and answer following this format:
+            When you have the name, the identification number and the symptons decide the specialty and the function and answer following this format:
             {format_instructions}
 
             """
@@ -54,13 +42,11 @@ human_template: str = """
 
             Previous conversation:
             {chat_history}
-            
+
             Patient: {text}
             """
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-chat_prompt = ChatPromptTemplate.from_messages(
-    [system_message_prompt, human_message_prompt]
-)
+chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
 
 memory = ConversationBufferMemory(input_key="text", memory_key="chat_history", human_prefix="Patient", ai_prefix="Doctor")
 
@@ -87,14 +73,14 @@ class OpenAILLMLogic(Illm.ILLM):
 
         chain = LLMChain(llm=llm, prompt=chat_prompt, memory=memory, verbose=True)
 
-        result: str = await chain.arun({'text': prompt, 'format_instructions': parser.get_format_instructions()})
+        result: str = await chain.arun({"text": prompt, "format_instructions": parser.get_format_instructions()})
 
         print(result)
 
         if self.is_json_convertible(result):
             json_result = json.loads(result)
-            result = json_result['response_to_the_user']
-            self.queue_management_system.enqueue(json_result['name'], json_result['urgency'])
+            result = json_result["response_to_the_user"]
+            self.queue_management_system.enqueue(json_result["name"], json_result["urgency"])
             return f"{result} ({json_result['urgency']},{json_result['medical_specialty']})"
         else:
             return result
